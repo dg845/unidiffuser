@@ -54,7 +54,7 @@ def make_test_models():
     # Make a small random U-ViT noise prediction model.
     set_seed(0)
     unet = UViT(
-        img_size=8,
+        img_size=16,
         in_chans=4,
         patch_size=2,
         embed_dim=16,

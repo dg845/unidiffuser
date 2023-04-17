@@ -262,7 +262,8 @@ def get_test_autoencoder(pretrained_path, scale_factor=0.18215):
         attn_resolutions=[],
         dropout=0.0
     )
-    return FrozenAutoencoderKL(ddconfig, 4, pretrained_path, scale_factor)
+    vae_scale_factor = 2 ** (len(ddconfig['ch_mult']) - 1)
+    return FrozenAutoencoderKL(ddconfig, 4, pretrained_path, scale_factor), vae_scale_factor
 
 
 # ----END----
@@ -274,9 +275,9 @@ def stable_diffusion_beta_schedule(linear_start=0.00085, linear_end=0.0120, n_ti
     )
     return _betas.numpy()
 
-
-def prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_preprocess, autoencoder):
-    resolution = config.z_shape[-1] * 8
+# Modified to use vae_scale_factor in place of hardcoded value of 8 when calculating resolution.
+def prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_preprocess, autoencoder, vae_scale_factor):
+    resolution = config.z_shape[-1] * vae_scale_factor
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     contexts = torch.randn(config.n_samples, 77, config.clip_text_dim).to(device)
@@ -376,8 +377,9 @@ def evaluate(config):
 
     # autoencoder = libs.autoencoder.get_model(**config.autoencoder)
     # Load test autoencoder
-    autoencoder = get_test_autoencoder(**config.autoencoder)
+    autoencoder, vae_scale_factor = get_test_autoencoder(**config.autoencoder)
     autoencoder.to(device)
+    print(f"VAE scale factor: {vae_scale_factor}")
 
     # clip_img_model, clip_img_model_preprocess = clip.load("ViT-B/32", device=device, jit=False)
     # Load test CLIP image model from huggingface transformers 4.23.1
@@ -525,7 +527,14 @@ def evaluate(config):
     logging.info(config.sample)
     logging.info(f'N={N}')
 
-    contexts, img_contexts, clip_imgs = prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_preprocess, autoencoder)
+    contexts, img_contexts, clip_imgs = prepare_contexts(
+        config,
+        clip_text_model,
+        clip_img_model,
+        clip_img_model_preprocess,
+        autoencoder,
+        vae_scale_factor,
+    )
 
     contexts = contexts  # the clip embedding of conditioned texts
     contexts_low_dim = contexts if not use_caption_decoder else caption_decoder.encode_prefix(contexts)  # the low dimensional version of the contexts, which is the input to the nnet
@@ -602,9 +611,9 @@ def evaluate(config):
             # Convert to equivalent of diffusers numpy output
             # basically just put image on CPU, float32, nparray, B C H W => B H W C
             numpy_sample = sample.cpu().permute(1, 2, 0).float().numpy()
-            print(f"Sample {idx} array:")
-            print(numpy_sample)
-            numpy_sample_slice = numpy_sample[-3:, -3:, -1]
+            # print(f"Sample {idx} array:")
+            # print(numpy_sample)
+            numpy_sample_slice = numpy_sample[-3:, -3:, -1].flatten()
             print(f"Sample {idx} slice:")
             print(numpy_sample_slice)
 
@@ -627,9 +636,9 @@ def evaluate(config):
             # Convert to equivalent of diffusers numpy output
             # basically just put image on CPU, float32, nparray, B C H W => B H W C
             numpy_sample = sample.cpu().permute(1, 2, 0).float().numpy()
-            print(f"Sample {idx} array:")
-            print(numpy_sample)
-            numpy_sample_slice = numpy_sample[-3:, -3:, -1]
+            # print(f"Sample {idx} array:")
+            # print(numpy_sample)
+            numpy_sample_slice = numpy_sample[-3:, -3:, -1].flatten()
             print(f"Sample {idx} slice:")
             print(numpy_sample_slice)
             

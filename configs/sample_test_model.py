@@ -11,7 +11,7 @@ def get_config():
 
     config.seed = 0
     config.pred = 'noise_pred'
-    config.z_shape = (4, 8, 8)
+    config.z_shape = (4, 16, 16)
     config.clip_img_dim = 32
     config.clip_text_dim = 32
     config.text_dim = 32  # reduce dimension
@@ -30,7 +30,7 @@ def get_config():
 
     config.nnet = d(
         name='uvit_multi_post_ln_v1',
-        img_size=8,
+        img_size=16,
         in_chans=4,
         patch_size=2,
         embed_dim=16,
