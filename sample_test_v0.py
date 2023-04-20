@@ -282,9 +282,9 @@ def stable_diffusion_beta_schedule(linear_start=0.00085, linear_end=0.0120, n_ti
     )
     return _betas.numpy()
 
-# Modified to use vae_scale_factor in place of hardcoded value of 8 when calculating resolution.
-def prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_preprocess, autoencoder, vae_scale_factor):
-    resolution = config.z_shape[-1] * vae_scale_factor
+
+def prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_preprocess, autoencoder):
+    resolution = config.z_shape[-1] * 8
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     contexts = torch.randn(config.n_samples, 77, config.clip_text_dim).to(device)
@@ -304,7 +304,6 @@ def prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_pre
             image = np.array(image).astype(np.uint8)
             image = utils.center_crop(resolution, resolution, image)
             # clip_img_feature = clip_img_model.encode_image(clip_img_model_preprocess(Image.fromarray(image)).unsqueeze(0).to(device))
-            # Make the proper call to huggingface transformers CLIPVisionModel
             clip_inputs = clip_img_model_preprocess(images=image, return_tensors="pt")
             clip_img_feature = clip_img_model(**clip_inputs).pooler_output
 
@@ -388,6 +387,7 @@ def evaluate(config):
     autoencoder, vae_scale_factor = get_test_autoencoder(**config.autoencoder)
     autoencoder.to(device)
     # print(f"VAE scale factor: {vae_scale_factor}")
+    autoencoder.to(device)
 
     # clip_img_model, clip_img_model_preprocess = clip.load("ViT-B/32", device=device, jit=False)
     # Load test CLIP image model from huggingface transformers 4.23.1
@@ -424,8 +424,7 @@ def evaluate(config):
 
         t_text = torch.zeros(timesteps.size(0), dtype=torch.int, device=device)
 
-        z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=t_text,
-                                             data_type=torch.zeros_like(t_text, device=device, dtype=torch.int) + config.data_type)
+        z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=t_text)
         x_out = combine(z_out, clip_img_out)
 
         if config.sample.scale == 0.:
@@ -435,13 +434,11 @@ def evaluate(config):
             _empty_context = einops.repeat(empty_context, 'L D -> B L D', B=x.size(0))
             if use_caption_decoder:
                 _empty_context = caption_decoder.encode_prefix(_empty_context)
-            z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z, clip_img, text=_empty_context, t_img=timesteps, t_text=t_text,
-                                                                      data_type=torch.zeros_like(t_text, device=device, dtype=torch.int) + config.data_type)
+            z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z, clip_img, text=_empty_context, t_img=timesteps, t_text=t_text)
             x_out_uncond = combine(z_out_uncond, clip_img_out_uncond)
         elif config.sample.t2i_cfg_mode == 'true_uncond':
             text_N = torch.randn_like(text)  # 3 other possible choices
-            z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z, clip_img, text=text_N, t_img=timesteps, t_text=torch.ones_like(timesteps) * N,
-                                                                      data_type=torch.zeros_like(t_text, device=device, dtype=torch.int) + config.data_type)
+            z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z, clip_img, text=text_N, t_img=timesteps, t_text=torch.ones_like(timesteps) * N)
             x_out_uncond = combine(z_out_uncond, clip_img_out_uncond)
         else:
             raise NotImplementedError
@@ -453,16 +450,14 @@ def evaluate(config):
         z, clip_img = split(x)
         text = torch.randn(x.size(0), 77, config.text_dim, device=device)
         t_text = torch.ones_like(timesteps) * N
-        z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=t_text,
-                                             data_type=torch.zeros_like(t_text, device=device, dtype=torch.int) + config.data_type)
+        z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=t_text)
         x_out = combine(z_out, clip_img_out)
         return x_out
 
     def t_nnet(x, timesteps):
         z = torch.randn(x.size(0), *config.z_shape, device=device)
         clip_img = torch.randn(x.size(0), 1, config.clip_img_dim, device=device)
-        z_out, clip_img_out, text_out = nnet(z, clip_img, text=x, t_img=torch.ones_like(timesteps) * N, t_text=timesteps,
-                                             data_type=torch.zeros_like(timesteps, device=device, dtype=torch.int) + config.data_type)
+        z_out, clip_img_out, text_out = nnet(z, clip_img, text=x, t_img=torch.ones_like(timesteps) * N, t_text=timesteps)
         return text_out
 
     def i2t_nnet(x, timesteps, z, clip_img):
@@ -473,16 +468,14 @@ def evaluate(config):
         """
         t_img = torch.zeros(timesteps.size(0), dtype=torch.int, device=device)
 
-        z_out, clip_img_out, text_out = nnet(z, clip_img, text=x, t_img=t_img, t_text=timesteps,
-                                             data_type=torch.zeros_like(t_img, device=device, dtype=torch.int) + config.data_type)
+        z_out, clip_img_out, text_out = nnet(z, clip_img, text=x, t_img=t_img, t_text=timesteps)
 
         if config.sample.scale == 0.:
             return text_out
 
         z_N = torch.randn_like(z)  # 3 other possible choices
         clip_img_N = torch.randn_like(clip_img)
-        z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z_N, clip_img_N, text=x, t_img=torch.ones_like(timesteps) * N, t_text=timesteps,
-                                                                  data_type=torch.zeros_like(timesteps, device=device, dtype=torch.int) + config.data_type)
+        z_out_uncond, clip_img_out_uncond, text_out_uncond = nnet(z_N, clip_img_N, text=x, t_img=torch.ones_like(timesteps) * N, t_text=timesteps)
 
         return text_out + config.sample.scale * (text_out - text_out_uncond)
 
@@ -503,8 +496,7 @@ def evaluate(config):
 
     def joint_nnet(x, timesteps):
         z, clip_img, text = split_joint(x)
-        z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=timesteps,
-                                             data_type=torch.zeros_like(timesteps, device=device, dtype=torch.int) + config.data_type)
+        z_out, clip_img_out, text_out = nnet(z, clip_img, text=text, t_img=timesteps, t_text=timesteps)
         x_out = combine_joint(z_out, clip_img_out, text_out)
 
         if config.sample.scale == 0.:
@@ -514,10 +506,8 @@ def evaluate(config):
         clip_img_noise = torch.randn(x.size(0), 1, config.clip_img_dim, device=device)
         text_noise = torch.randn(x.size(0), 77, config.text_dim, device=device)
 
-        _, _, text_out_uncond = nnet(z_noise, clip_img_noise, text=text, t_img=torch.ones_like(timesteps) * N, t_text=timesteps,
-                                     data_type=torch.zeros_like(timesteps, device=device, dtype=torch.int) + config.data_type)
-        z_out_uncond, clip_img_out_uncond, _ = nnet(z, clip_img, text=text_noise, t_img=timesteps, t_text=torch.ones_like(timesteps) * N,
-                                                    data_type=torch.zeros_like(timesteps, device=device, dtype=torch.int) + config.data_type)
+        _, _, text_out_uncond = nnet(z_noise, clip_img_noise, text=text, t_img=torch.ones_like(timesteps) * N, t_text=timesteps)
+        z_out_uncond, clip_img_out_uncond, _ = nnet(z, clip_img, text=text_noise, t_img=timesteps, t_text=torch.ones_like(timesteps) * N)
 
         x_out_uncond = combine_joint(z_out_uncond, clip_img_out_uncond, text_out_uncond)
 
@@ -535,14 +525,7 @@ def evaluate(config):
     logging.info(config.sample)
     logging.info(f'N={N}')
 
-    contexts, img_contexts, clip_imgs = prepare_contexts(
-        config,
-        clip_text_model,
-        clip_img_model,
-        clip_img_model_preprocess,
-        autoencoder,
-        vae_scale_factor,
-    )
+    contexts, img_contexts, clip_imgs = prepare_contexts(config, clip_text_model, clip_img_model, clip_img_model_preprocess, autoencoder)
 
     contexts = contexts  # the clip embedding of conditioned texts
     contexts_low_dim = contexts if not use_caption_decoder else caption_decoder.encode_prefix(contexts)  # the low dimensional version of the contexts, which is the input to the nnet
@@ -649,7 +632,7 @@ def evaluate(config):
             numpy_sample_slice = numpy_sample[-3:, -3:, -1].flatten()
             print(f"Sample {idx} slice:")
             print(numpy_sample_slice)
-            
+
             save_path = os.path.join(config.output_path, config.mode, f'{idx}.png')
             save_image(sample, save_path)
             # Disable watermarking for testing purposes
@@ -693,8 +676,8 @@ import os
 
 FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file(
-    "config", "configs/sample_test_model_v1.py", "Configuration.", lock_config=False)
-flags.DEFINE_string("nnet_path", "models/uvit_v1.pth", "The nnet to evaluate.")
+    "config", "configs/sample_test_model_v0.py", "Configuration.", lock_config=False)
+flags.DEFINE_string("nnet_path", "models/uvit_v0.pth", "The nnet to evaluate.")
 flags.DEFINE_string("output_path", "out", "dir to write results to")
 flags.DEFINE_string("prompt", "an elephant under the sea", "the prompt for text-to-image generation and text variation")
 flags.DEFINE_string("img", "assets/space.jpg", "the image path for image-to-text generation and image variation")

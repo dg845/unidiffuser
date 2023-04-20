@@ -19,7 +19,8 @@ from transformers import (
 )
 
 from sample_test_v1 import AutoencoderKL
-from libs.uvit_multi_post_ln_v1 import UViT
+from libs.uvit_multi_post_ln import UViT as UViT_V0
+from libs.uvit_multi_post_ln_v1 import UViT as UViT_V1
 
 
 def set_seed(seed: int):
@@ -51,9 +52,9 @@ def make_test_models():
     )
     torch.save(vae.state_dict(), 'models/autoencoder_kl.pth')
 
-    # Make a small random U-ViT noise prediction model.
+    # Make a small random U-ViT V0 noise prediction model.
     set_seed(0)
-    unet = UViT(
+    unet_v0 = UViT_V0(
         img_size=16,
         in_chans=4,
         patch_size=2,
@@ -73,7 +74,31 @@ def make_test_models():
         num_text_tokens=77,
         clip_img_dim=32,
     )
-    torch.save(unet.state_dict(), 'models/uvit_v1.pth')
+    torch.save(unet_v0.state_dict(), 'models/uvit_v0.pth')
+
+    # Make a small random U-ViT V1 noise prediction model.
+    set_seed(0)
+    unet_v1 = UViT_V1(
+        img_size=16,
+        in_chans=4,
+        patch_size=2,
+        embed_dim=16,
+        depth=2,
+        num_heads=2,
+        mlp_ratio=4,
+        qkv_bias=False,
+        qk_scale=None,
+        pos_drop_rate=0,
+        drop_rate=0,
+        attn_drop_rate=0,
+        norm_layer=nn.LayerNorm,
+        mlp_time_embed=False,
+        use_checkpoint=False,
+        text_dim=32,
+        num_text_tokens=77,
+        clip_img_dim=32,
+    )
+    torch.save(unet_v1.state_dict(), 'models/uvit_v1.pth')
 
     # Make a small random CLIPTextModel
     torch.manual_seed(0)
@@ -137,7 +162,6 @@ def make_test_models():
     clip_caption_model_dir = 'models/clip_caption_model'
     clip_caption_model.save_pretrained(clip_caption_model_dir)
     clip_caption_tokenizer.save_pretrained(clip_caption_model_dir)
-
 
 
 def main():
