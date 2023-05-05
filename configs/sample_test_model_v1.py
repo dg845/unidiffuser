@@ -18,7 +18,7 @@ def get_config():
     config.data_type = 1
 
     config.autoencoder = d(
-        pretrained_path='models/autoencoder_kl.pth',
+        pretrained_path='models/test/autoencoder_kl.pth',
     )
 
     config.caption_decoder = d(

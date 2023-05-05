@@ -17,12 +17,12 @@ def get_config():
     config.text_dim = 32  # reduce dimension
 
     config.autoencoder = d(
-        pretrained_path='models/autoencoder_kl.pth',
+        pretrained_path='models/test/autoencoder_kl.pth',
     )
 
     config.caption_decoder = d(
         tokenizer_pretrained_path="models/clip_caption_model",
-        ckpt_pretrained_path="models/clip_caption_model",
+        ckpt_pretrained_path="models/test/caption_decoder.pth",
         gpt_hidden_dim=config.get_ref('clip_text_dim'),
         hidden_dim=config.get_ref('text_dim')
     )
