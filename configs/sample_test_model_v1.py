@@ -23,7 +23,7 @@ def get_config():
 
     config.caption_decoder = d(
         tokenizer_pretrained_path="models/clip_caption_model",
-        ckpt_pretrained_path="models/clip_caption_model",
+        ckpt_pretrained_path="models/test/caption_decoder.pth",
         gpt_hidden_dim=config.get_ref('clip_text_dim'),
         hidden_dim=config.get_ref('text_dim')
     )
