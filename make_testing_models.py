@@ -12,7 +12,7 @@ from transformers import (
     CLIPTextModel,
     CLIPTokenizer,
     CLIPVisionConfig,
-    CLIPVisionModel,
+    CLIPVisionModelWithProjection,
     GPT2Config,
     GPT2LMHeadModel,
     GPT2Tokenizer,
@@ -50,7 +50,7 @@ def make_test_models():
         embed_dim=4,  # Not actually used in the code
         scale_factor=0.18215,
     )
-    torch.save(vae.state_dict(), 'models/autoencoder_kl.pth')
+    torch.save(vae.state_dict(), 'models/test/autoencoder_kl.pth')
 
     # Make a small random U-ViT V0 noise prediction model.
     set_seed(0)
@@ -74,7 +74,7 @@ def make_test_models():
         num_text_tokens=77,
         clip_img_dim=32,
     )
-    torch.save(unet_v0.state_dict(), 'models/uvit_v0.pth')
+    torch.save(unet_v0.state_dict(), 'models/test/uvit_v0.pth')
 
     # Make a small random U-ViT V1 noise prediction model.
     set_seed(0)
@@ -98,7 +98,7 @@ def make_test_models():
         num_text_tokens=77,
         clip_img_dim=32,
     )
-    torch.save(unet_v1.state_dict(), 'models/uvit_v1.pth')
+    torch.save(unet_v1.state_dict(), 'models/test/uvit_v1.pth')
 
     # Make a small random CLIPTextModel
     torch.manual_seed(0)
@@ -134,7 +134,7 @@ def make_test_models():
         attention_dropout=0.1,
         initializer_range=0.02,
     )
-    clip_image_encoder = CLIPVisionModel(clip_image_encoder_config)
+    clip_image_encoder = CLIPVisionModelWithProjection(clip_image_encoder_config)
     clip_feature_extractor = CLIPFeatureExtractor(crop_size=32, size=32)
     clip_processor = CLIPProcessor(clip_feature_extractor, clip_text_tokenizer)
     clip_image_encoder_dir = 'models/clip_image_encoder'

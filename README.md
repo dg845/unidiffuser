@@ -25,6 +25,7 @@ In particular, UniDiffuser is able to produce perceptually realistic samples in 
 conda create -n unidiffuser python=3.9
 conda activate unidiffuser
 pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu116  # install torch-1.13.1
+# transformers >= 4.25.1 for make_testing_models.py, sample_test_v0.py, sample_test_v1.py
 pip install accelerate==0.12.0 absl-py ml_collections einops ftfy==6.1.1 transformers==4.23.1
 pip install -e git+https://github.com/openai/CLIP.git@main#egg=clip
 

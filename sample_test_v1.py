@@ -25,7 +25,7 @@ from transformers import (
     CLIPProcessor,
     CLIPTextModel,
     CLIPTokenizer,
-    CLIPVisionModel,
+    CLIPVisionModelWithProjection,
     GPT2LMHeadModel,
     GPT2Tokenizer,
 )
@@ -474,7 +474,7 @@ def prepare_latents(
             # clip_img_feature = clip_img_model.encode_image(clip_img_model_preprocess(Image.fromarray(image)).unsqueeze(0).to(device))
             # Make the proper call to huggingface transformers CLIPVisionModel
             clip_inputs = clip_img_model_preprocess(images=image, return_tensors="pt")
-            clip_img_feature = clip_img_model(**clip_inputs).pooler_output
+            clip_img_feature = clip_img_model(**clip_inputs).image_embeds
 
             image = (image / 127.5 - 1.0).astype(np.float32)
             image = einops.rearrange(image, 'h w c -> 1 c h w')
@@ -587,7 +587,7 @@ def evaluate(config):
     config = ml_collections.FrozenConfigDict(config)
     # utils.set_logger(log_level='info')
     # utils.set_logger(log_level='debug', fname="./logs/test.txt")
-    utils.set_logger(log_level='debug')
+    utils.set_logger(log_level=config.sample.log_level)
 
     _betas = stable_diffusion_beta_schedule()
     N = len(_betas)
@@ -632,7 +632,7 @@ def evaluate(config):
     # clip_img_model, clip_img_model_preprocess = clip.load("ViT-B/32", device=device, jit=False)
     # Load test CLIP image model from huggingface transformers 4.23.1
     # Note that this version has CLIPProcessor instead of CLIPImageProcessor
-    clip_img_model = CLIPVisionModel.from_pretrained("models/clip_image_encoder")
+    clip_img_model = CLIPVisionModelWithProjection.from_pretrained("models/clip_image_encoder")
     clip_img_model_preprocess = CLIPProcessor.from_pretrained("models/clip_image_encoder")
 
     empty_context = clip_text_model.encode([''])[0]

@@ -51,7 +51,8 @@ def get_config():
         sample_steps=2,
         scale=5.,  # w (imagen) = 1 + s (unidiffuser)
         t2i_cfg_mode='true_uncond',
-        device = "cpu",
+        device="cpu",
+        log_level="info",
     )
 
     return config
