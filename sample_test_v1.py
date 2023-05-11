@@ -448,16 +448,17 @@ def prepare_latents(
     clip_img_model_preprocess,
     autoencoder,
     vae_scale_factor,
-    generator
+    device,
 ):
     resolution = config.z_shape[-1] * vae_scale_factor
     # Fix device to CPU for reproducibility.
-    device = 'cpu'
-    torch_device = torch.device('cpu')
+    latent_device = "cpu"
+    latent_torch_device = torch.device(latent_device)
+    generator = torch.Generator(device=latent_torch_device).manual_seed(config.seed)
 
-    contexts = randn_tensor((config.n_samples, 77, config.clip_text_dim), generator=generator, device=torch_device)
-    img_contexts = randn_tensor((config.n_samples, config.z_shape[0], config.z_shape[1], config.z_shape[2]), generator=generator)
-    clip_imgs = randn_tensor((config.n_samples, 1, config.clip_img_dim), generator=generator)
+    contexts = randn_tensor((config.n_samples, 77, config.clip_text_dim), generator=generator, device=latent_torch_device)
+    img_contexts = randn_tensor((config.n_samples, config.z_shape[0], config.z_shape[1], config.z_shape[2]), generator=generator, device=latent_torch_device)
+    clip_imgs = randn_tensor((config.n_samples, 1, config.clip_img_dim), generator=generator, device=latent_torch_device)
 
     if config.mode in ['t2i', 't2i2t']:
         prompts = [ config.prompt ] * config.n_samples
@@ -493,7 +494,10 @@ def prepare_latents(
 
         img_contexts = torch.concat(img_contexts, dim=0)
         clip_imgs = torch.stack(clip_imgs, dim=0)
-
+    
+    contexts = contexts.to(device)
+    img_contexts = img_contexts.to(device)
+    clip_imgs = clip_imgs.to(device)
     return contexts, img_contexts, clip_imgs
 
     return contexts, img_contexts, clip_imgs
@@ -575,8 +579,8 @@ def evaluate(config):
 
     # device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # Fix device to cpu for now for reproducibility
-    device = 'cpu'
-    torch_device = torch.device('cpu')
+    device = config.sample.device
+    torch_device = torch.device(device)
     set_seed(config.seed)
 
     # Instantiate generator
@@ -809,7 +813,7 @@ def evaluate(config):
         clip_img_model_preprocess,
         autoencoder,
         vae_scale_factor,
-        generator,
+        device,
     )
     logging.debug(f"Text latents: {contexts}")
     logging.debug(f"Text latents shape: {contexts.shape}")
@@ -979,6 +983,7 @@ def evaluate(config):
             numpy_sample_slice = numpy_sample[-3:, -3:, -1].flatten()
             print(f"Sample {idx} slice:")
             print(numpy_sample_slice)
+            np.savetxt("joint_image_slice.txt", numpy_sample_slice, fmt='%1.4f')
 
             save_path = os.path.join(config.output_path, config.mode, f'{idx}.png')
             save_image(sample, save_path)
@@ -1006,6 +1011,7 @@ def evaluate(config):
             numpy_sample_slice = numpy_sample[-3:, -3:, -1].flatten()
             print(f"Sample {idx} slice:")
             print(numpy_sample_slice)
+            np.savetxt("t2i_image_slice.txt", numpy_sample_slice, fmt='%1.4f')
             
             save_path = os.path.join(config.output_path, config.mode, f'{idx}.png')
             save_image(sample, save_path)

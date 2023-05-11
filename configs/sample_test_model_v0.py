@@ -50,7 +50,8 @@ def get_config():
     config.sample = d(
         sample_steps=2,
         scale=5.,  # w (imagen) = 1 + s (unidiffuser)
-        t2i_cfg_mode='true_uncond'
+        t2i_cfg_mode='true_uncond',
+        device = "cpu",
     )
 
     return config
