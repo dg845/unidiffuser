@@ -500,8 +500,6 @@ def prepare_latents(
     clip_imgs = clip_imgs.to(device)
     return contexts, img_contexts, clip_imgs
 
-    return contexts, img_contexts, clip_imgs
-
 
 # ----END----
 
