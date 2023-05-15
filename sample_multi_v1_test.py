@@ -301,8 +301,9 @@ def evaluate(config):
     generator = torch.Generator(device=torch_device).manual_seed(config.seed)
 
     config = ml_collections.FrozenConfigDict(config)
-    if config.sample.log_file is not None:
-        utils.set_logger(log_level=config.sample.log_level, fname=config.sample.log_file)
+    if config.sample.log_dir is not None:
+        log_filename = config.sample.log_dir + "/" + config.mode + ".txt"
+        utils.set_logger(log_level=config.sample.log_level, fname=log_filename)
     else:
         utils.set_logger(log_level=config.sample.log_level)
 
@@ -492,10 +493,20 @@ def evaluate(config):
     contexts = contexts  # the clip embedding of conditioned texts
     contexts_low_dim = contexts if not use_caption_decoder else caption_decoder.encode_prefix(contexts)  # the low dimensional version of the contexts, which is the input to the nnet
 
+    logging.debug(f"Text latents: {contexts}")
+    logging.debug(f"Text latents shape: {contexts.shape}")
+    logging.debug(f"Low dim text latents: {contexts_low_dim}")
+    logging.debug(f"Low dim text latents shape: {contexts_low_dim.shape}")
+
     img_contexts = img_contexts  # img_contexts is the autoencoder moment
     # z_img = autoencoder.sample(img_contexts)
     z_img = img_contexts  # sample autoencoder latents directly, no need to call sample()
     clip_imgs = clip_imgs  # the clip embedding of conditioned image
+
+    logging.debug(f"VAE latents: {z_img}")
+    logging.debug(f"VAE latents shape: {z_img.shape}")
+    logging.debug(f"CLIP latents: {clip_imgs}")
+    logging.debug(f"CLIP latents shape: {clip_imgs.shape}")
 
     if config.mode in ['t2i', 't2i2t']:
         _n_samples = contexts_low_dim.size(0)
@@ -569,14 +580,22 @@ def evaluate(config):
             t = t_continuous * N
             if mode == 'joint':
                 noise_pred = joint_nnet(x, t)
-                logging.debug(f"Noise pred for time {t}: {noise_pred}")
-                logging.debug(f"Noise pred for time {t} shape: {noise_pred.shape}")
+                logging.debug(f"Joint noise pred for time {t}: {noise_pred}")
+                logging.debug(f"Joint noise pred for time {t} shape: {noise_pred.shape}")
                 return noise_pred
                 # return joint_nnet(x, t)
             elif mode == 't2i':
-                return t2i_nnet(x, t, **kwargs)
+                noise_pred = t2i_nnet(x, t, **kwargs)
+                logging.debug(f"t2i noise pred for time {t}: {noise_pred}")
+                logging.debug(f"t2i noise pred for time {t} shape: {noise_pred.shape}")
+                return noise_pred
+                # return t2i_nnet(x, t, **kwargs)
             elif mode == 'i2t':
-                return i2t_nnet(x, t, **kwargs)
+                noise_pred = i2t_nnet(x, t, **kwargs)
+                logging.debug(f"i2t noise pred for time {t}: {noise_pred}")
+                logging.debug(f"i2t noise pred for time {t} shape: {noise_pred.shape}")
+                return noise_pred
+                # return i2t_nnet(x, t, **kwargs)
             elif mode == 'i':
                 return i_nnet(x, t)
             elif mode == 't':
@@ -611,8 +630,23 @@ def evaluate(config):
     if config.mode in ['joint']:
         # _z, _clip_img, _text = sample_fn(config.mode)
         _z, _clip_img, _text = test_sample_fn(config.mode)
+
+        logging.debug(f"Text output: {_text}")
+        logging.debug(f"Text output shape: {_text.shape}")
+        logging.debug(f"VAE output: {_z}")
+        logging.debug(f"VAE output shape: {_z.shape}")
+        logging.debug(f"CLIP output: {_clip_img}")
+        logging.debug(f"CLIP output shape: {_clip_img.shape}")
+
         samples = unpreprocess(decode(_z))
+
+        logging.debug(f"VAE decoded sample: {samples}")
+        logging.debug(f"VAE decoded sample shape: {samples.shape}")
+
         prompts = caption_decoder.generate_captions(_text)
+
+        logging.debug(f"Generated text: {prompts}")
+
         os.makedirs(os.path.join(config.output_path, config.mode), exist_ok=True)
         with open(os.path.join(config.output_path, config.mode, 'prompts.txt'), 'w') as f:
             print('\n'.join(prompts), file=f)

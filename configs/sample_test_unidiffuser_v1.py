@@ -52,7 +52,7 @@ def get_config():
         t2i_cfg_mode='true_uncond',
         device="cuda",
         log_level="info",
-        log_file=None,
+        log_dir="logs",
     )
 
     return config
