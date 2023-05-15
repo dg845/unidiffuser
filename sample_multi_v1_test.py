@@ -192,10 +192,7 @@ def prepare_latents(
         def get_img_feature(image):
             image = np.array(image).astype(np.uint8)
             image = utils.center_crop(resolution, resolution, image)
-            # clip_img_feature = clip_img_model.encode_image(clip_img_model_preprocess(Image.fromarray(image)).unsqueeze(0).to(device))
-            # Make the proper call to huggingface transformers CLIPVisionModel
-            clip_inputs = clip_img_model_preprocess(images=image, return_tensors="pt")
-            clip_img_feature = clip_img_model(**clip_inputs).image_embeds
+            clip_img_feature = clip_img_model.encode_image(clip_img_model_preprocess(Image.fromarray(image)).unsqueeze(0).to(device))
 
             image = (image / 127.5 - 1.0).astype(np.float32)
             image = einops.rearrange(image, 'h w c -> 1 c h w')
