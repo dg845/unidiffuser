@@ -9,7 +9,7 @@ def d(**kwargs):
 def get_config():
     config = ml_collections.ConfigDict()
 
-    config.seed = 1234
+    config.seed = 0
     config.pred = 'noise_pred'
     config.z_shape = (4, 64, 64)
     config.clip_img_dim = 512
@@ -46,7 +46,7 @@ def get_config():
     )
 
     config.sample = d(
-        sample_steps=50,
+        sample_steps=3,
         scale=7.,
         t2i_cfg_mode='true_uncond',
         device="cuda",
