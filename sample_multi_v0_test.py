@@ -103,12 +103,12 @@ def get_test_autoencoder(pretrained_path, scale_factor=0.18215):
     ddconfig = dict(
         double_z=True,
         z_channels=4,
-        resolution=32,
+        resolution=256,
         in_channels=3,
         out_ch=3,
-        ch=32,
-        ch_mult=[1, 2],
-        num_res_blocks=1,
+        ch=128,
+        ch_mult=[1, 2, 4, 4],
+        num_res_blocks=2,
         attn_resolutions=[],
         dropout=0.0
     )
