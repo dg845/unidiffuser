@@ -357,7 +357,7 @@ def evaluate(config):
     # Convert sample images to PIL
     if output_images is not None:
         for sample in output_images:
-            standard_transforms.ToPILImage()(sample)
+            sample = standard_transforms.ToPILImage()(sample)
 
     return output_images, output_text
 
