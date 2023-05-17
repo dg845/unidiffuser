@@ -11,10 +11,10 @@ from PIL import Image
 import time
 import os
 
-from ..libs.autoencoder import get_model
-from ..libs.clip import FrozenCLIPEmbedder
-from ..dpm_solver_pp import NoiseScheduleVP, DPM_Solver
-from ..utils import center_crop, set_logger, get_nnet
+from ...libs.autoencoder import get_model
+from ...libs.clip import FrozenCLIPEmbedder
+from ...dpm_solver_pp import NoiseScheduleVP, DPM_Solver
+from ...utils import center_crop, set_logger, get_nnet
 
 
 def stable_diffusion_beta_schedule(linear_start=0.00085, linear_end=0.0120, n_timestep=1000):
@@ -102,7 +102,7 @@ def evaluate(config):
 
     use_caption_decoder = config.text_dim < config.clip_text_dim or config.mode != 't2i'
     if use_caption_decoder:
-        from ..libs.caption_decoder import CaptionDecoder
+        from ...libs.caption_decoder import CaptionDecoder
         caption_decoder = CaptionDecoder(device=device, **config.caption_decoder)
     else:
         caption_decoder = None
