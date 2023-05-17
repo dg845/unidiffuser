@@ -4,11 +4,11 @@ from setuptools import setup, find_packages
 
 setup(
     name="unidiffuser",
-    py_modules=["unidiffuser"],
     version="1.0",
     description="",
     author="thuml",
-    packages=find_packages(),
+    package_dir={"": "src"},
+    packages=find_packages("src"),
     install_requires=[
         "accelerate == 0.12.0",
         "absl-py",
