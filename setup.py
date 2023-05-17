@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="unidiffuser",
+    py_modules=["unidiffuser"],
     version="1.0",
     description="",
     author="thuml",
