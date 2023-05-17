@@ -354,6 +354,11 @@ def evaluate(config):
     print(f'\nGPU memory usage: {torch.cuda.max_memory_reserved() / 1024 ** 3:.2f} GB')
     print(f'\nresults are saved in {os.path.join(config.output_path, config.mode)} :)')
 
+    # Convert sample images to PIL
+    if output_images is not None:
+        for sample in output_images:
+            standard_transforms.ToPILImage()(sample)
+
     return output_images, output_text
 
 
